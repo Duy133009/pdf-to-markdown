@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF → Markdown Converter</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 24px 32px;
+      border-bottom: 1px solid #1e2535;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header .logo {
+      font-size: 22px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header .badge {
+      font-size: 11px;
+      background: #1e2535;
+      color: #94a3b8;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid #2d3748;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      height: calc(100vh - 73px);
+    }
+
+    .panel {
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    .panel-left { border-right: 1px solid #1e2535; }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* Drop Zone */
+    #drop-zone {
+      border: 2px dashed #2d3748;
+      border-radius: 16px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #161b27;
+    }
+
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: #6366f1;
+      background: #1a1f35;
+    }
+
+    #drop-zone .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    #drop-zone h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+    }
+
+    #drop-zone p {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 16px;
+    }
+
+    #drop-zone .supported {
+      font-size: 11px;
+      color: #475569;
+      background: #1e2535;
+      padding: 6px 12px;
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    #file-input { display: none; }
+
+    /* File info */
+    #file-info {
+      display: none;
+      background: #161b27;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 16px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    #file-info .file-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    #file-info .file-details { flex: 1; min-width: 0; }
+    #file-info .file-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #file-info .file-size { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+    #clear-btn {
+      background: none;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color 0.2s;
+    }
+    #clear-btn:hover { color: #ef4444; }
+
+    /* Buttons */
+    .btn {
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      width: 100%;
+    }
+    .btn-primary:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-download {
+      background: #1e2535;
+      color: #a5b4fc;
+      border: 1px solid #2d3748;
+      flex: 1;
+    }
+    .btn-download:hover:not(:disabled) { background: #252d42; }
+    .btn-download:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-copy {
+      background: #1e2535;
+      color: #94a3b8;
+      border: 1px solid #2d3748;
+      flex: 1;
+    }
+    .btn-copy:hover:not(:disabled) { background: #252d42; }
+    .btn-copy:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Status */
+    #status {
+      display: none;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    #status.loading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #1e2535;
+      color: #94a3b8;
+      border: 1px solid #2d3748;
+    }
+    #status.error {
+      display: block;
+      background: #2d1515;
+      color: #f87171;
+      border: 1px solid #7f1d1d;
+    }
+    #status.success {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #0f2d1f;
+      color: #4ade80;
+      border: 1px solid #14532d;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #2d3748;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Output panel */
+    .output-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    #markdown-output {
+      flex: 1;
+      background: #161b27;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 20px;
+      font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #cbd5e1;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      resize: none;
+    }
+
+    #markdown-output.empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #334155;
+      font-family: inherit;
+      font-size: 14px;
+      white-space: normal;
+      text-align: center;
+    }
+
+    /* Stats */
+    #stats {
+      display: none;
+      gap: 16px;
+    }
+    #stats.show { display: flex; }
+
+    .stat-card {
+      flex: 1;
+      background: #161b27;
+      border: 1px solid #1e2535;
+      border-radius: 10px;
+      padding: 12px 16px;
+      text-align: center;
+    }
+    .stat-card .val {
+      font-size: 20px;
+      font-weight: 700;
+      color: #a5b4fc;
+    }
+    .stat-card .lbl {
+      font-size: 11px;
+      color: #475569;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 768px) {
+      main { grid-template-columns: 1fr; }
+      .panel-left { border-right: none; border-bottom: 1px solid #1e2535; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="logo">⚡ MD Convert</span>
+  <span class="badge">Local · No Upload · Private</span>
+</header>
+
+<main>
+  <!-- LEFT: Upload -->
+  <div class="panel panel-left">
+    <div class="panel-title">Upload File</div>
+
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="icon">📄</div>
+      <h3>Drop your file here</h3>
+      <p>or click to browse</p>
+      <span class="supported">PDF · DOCX · TXT · XLSX · PPTX · HTML · CSV · JSON</span>
+    </div>
+
+    <input type="file" id="file-input"
+      accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.pptx,.ppt,.html,.htm,.csv,.json,.xml" />
+
+    <div id="file-info">
+      <span class="file-icon" id="file-icon">📄</span>
+      <div class="file-details">
+        <div class="file-name" id="file-name"></div>
+        <div class="file-size" id="file-size"></div>
+      </div>
+      <button id="clear-btn" title="Remove file">✕</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div id="stats">
+      <div class="stat-card">
+        <div class="val" id="stat-chars">—</div>
+        <div class="lbl">Characters</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-lines">—</div>
+        <div class="lbl">Lines</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-words">—</div>
+        <div class="lbl">Words</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="convert-btn" disabled onclick="convertFile()">
+      <span>✨</span> Convert to Markdown
+    </button>
+  </div>
+
+  <!-- RIGHT: Output -->
+  <div class="panel">
+    <div class="panel-title">Markdown Output</div>
+
+    <div class="output-actions">
+      <button class="btn btn-download" id="download-btn" disabled onclick="downloadMd()">
+        ⬇ Download .md
+      </button>
+      <button class="btn btn-copy" id="copy-btn" disabled onclick="copyMd()">
+        📋 Copy
+      </button>
+    </div>
+
+    <div id="markdown-output" class="empty">
+      Your converted Markdown will appear here...
+    </div>
+  </div>
+</main>
+
+<script>
+  let selectedFile = null;
+  let markdownContent = '';
+  let outputFilename = '';
+
+  const fileIcons = {
+    pdf: '📕', docx: '📘', doc: '📘', txt: '📝',
+    xlsx: '📗', xls: '📗', pptx: '📙', ppt: '📙',
+    html: '🌐', htm: '🌐', csv: '📊', json: '📦', xml: '📦'
+  };
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  function setFile(file) {
+    selectedFile = file;
+    const ext = file.name.split('.').pop().toLowerCase();
+    document.getElementById('file-icon').textContent = fileIcons[ext] || '📄';
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-size').textContent = formatBytes(file.size);
+    document.getElementById('file-info').style.display = 'flex';
+    document.getElementById('drop-zone').style.display = 'none';
+    document.getElementById('convert-btn').disabled = false;
+    clearStatus();
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    document.getElementById('file-info').style.display = 'none';
+    document.getElementById('drop-zone').style.display = 'block';
+    document.getElementById('convert-btn').disabled = true;
+    document.getElementById('file-input').value = '';
+    clearStatus();
+  }
+
+  function clearStatus() {
+    const s = document.getElementById('status');
+    s.className = '';
+    s.style.display = 'none';
+    s.innerHTML = '';
+  }
+
+  function setStatus(type, msg) {
+    const s = document.getElementById('status');
+    s.className = type;
+    if (type === 'loading') {
+      s.innerHTML = `<div class="spinner"></div><span>${msg}</span>`;
+    } else if (type === 'success') {
+      s.innerHTML = `<span>✅</span><span>${msg}</span>`;
+    } else {
+      s.innerHTML = msg;
+    }
+  }
+
+  document.getElementById('clear-btn').onclick = (e) => { e.stopPropagation(); clearFile(); };
+
+  document.getElementById('file-input').onchange = (e) => {
+    if (e.target.files[0]) setFile(e.target.files[0]);
+  };
+
+  const dropZone = document.getElementById('drop-zone');
+  dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); };
+  dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
+  dropZone.ondrop = (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  };
+
+  async function convertFile() {
+    if (!selectedFile) return;
+
+    const btn = document.getElementById('convert-btn');
+    btn.disabled = true;
+    setStatus('loading', 'Converting...');
+    document.getElementById('stats').className = '';
+    document.getElementById('download-btn').disabled = true;
+    document.getElementById('copy-btn').disabled = true;
+
+    const output = document.getElementById('markdown-output');
+    output.className = 'empty';
+    output.textContent = 'Your converted Markdown will appear here...';
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res = await fetch('/convert', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.detail || 'Conversion failed');
+
+      markdownContent = data.markdown;
+      outputFilename = data.filename;
+
+      output.className = '';
+      output.textContent = markdownContent;
+
+      const chars = markdownContent.length;
+      const lines = markdownContent.split('\n').length;
+      const words = markdownContent.trim().split(/\s+/).filter(Boolean).length;
+
+      document.getElementById('stat-chars').textContent = chars.toLocaleString();
+      document.getElementById('stat-lines').textContent = lines.toLocaleString();
+      document.getElementById('stat-words').textContent = words.toLocaleString();
+      document.getElementById('stats').className = 'show';
+
+      setStatus('success', `Converted successfully → ${outputFilename}`);
+      document.getElementById('download-btn').disabled = false;
+      document.getElementById('copy-btn').disabled = false;
+
+    } catch (err) {
+      setStatus('error', '❌ ' + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function downloadMd() {
+    if (!markdownContent) return;
+    const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = outputFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function copyMd() {
+    if (!markdownContent) return;
+    await navigator.clipboard.writeText(markdownContent);
+    const btn = document.getElementById('copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = orig, 2000);
+  }
+</script>
+</body>
+</html>

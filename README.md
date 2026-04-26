@@ -17,7 +17,10 @@
 ## Features
 
 - **100% Client-side** — All conversion happens locally in your browser. Your files never leave your device.
-- **Multiple formats** — Convert PDF, DOCX, XLSX, CSV, HTML, JSON, XML, and plain text to Markdown.
+- **Multiple formats** — Convert PDF, DOCX, XLSX, CSV, HTML, JSON, XML, images (PNG/JPG/GIF), and plain text to Markdown.
+- **OCR support** — Built-in OCR (Tesseract.js) for extracting text from scanned PDFs and images. Toggle on/off per file.
+- **Live preview** — Side-by-side preview panel for PDFs (rendered page-by-page), images, and text files.
+- **Toggleable preview pane** — Show or hide the preview panel with one click. Preference saved across sessions.
 - **Beautiful theming** — 5 built-in themes (Dark, Light, Ocean, Midnight, Forest) plus fully customizable colors.
 - **Instant download** — Export your Markdown as a `.md` file with one click.
 - **One-click copy** — Copy the converted Markdown to your clipboard instantly.
@@ -28,16 +31,17 @@
 
 ## Supported Formats
 
-| Format      | Extension          | Converter                          |
-|-------------|--------------------|------------------------------------|
-| PDF         | `.pdf`             | pdf.js text extraction             |
-| Word        | `.docx`, `.doc`    | Mammoth.js + Turndown              |
-| Excel       | `.xlsx`, `.xls`    | SheetJS                            |
-| CSV         | `.csv`             | Custom CSV parser                  |
-| HTML        | `.html`, `.htm`    | Turndown                           |
-| JSON        | `.json`            | Pretty-printed code block          |
-| XML         | `.xml`             | Syntax-highlighted code block      |
-| Plain text  | `.txt`             | Raw text                           |
+| Format      | Extension                         | Converter                          |
+|-------------|-----------------------------------|------------------------------------|
+| PDF         | `.pdf`                            | pdf.js text extraction             |
+| Word        | `.docx`, `.doc`                   | Mammoth.js + Turndown              |
+| Excel       | `.xlsx`, `.xls`                   | SheetJS                            |
+| CSV         | `.csv`                            | Custom CSV parser                  |
+| HTML        | `.html`, `.htm`                   | Turndown                           |
+| JSON        | `.json`                           | Pretty-printed code block          |
+| XML         | `.xml`                            | Syntax-highlighted code block      |
+| Plain text  | `.txt`                            | Raw text                           |
+| Images      | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.bmp` | OCR (Tesseract.js) or raw text |
 
 ## Getting Started
 
@@ -104,15 +108,16 @@ You can also customize every color to your liking via the **Settings** panel (ge
 
 ## Tech Stack
 
-| Layer    | Technology                        |
-|----------|-----------------------------------|
-| Frontend | Vanilla HTML + CSS + JavaScript   |
-| Fonts    | Inter, JetBrains Mono (Google)    |
-| PDF      | [pdf.js](https://mozilla.github.io/pdf.js/) v3.11.174 |
-| DOCX     | [Mammoth.js](https://github.com/mwilliamson/mammoth.js) v1.6.0 |
-| Markdown | [Turndown](https://github.com/mixmark-io/turndown) v7.1.2 |
-| XLSX     | [SheetJS](https://sheetjs.com/) v0.18.5 |
-| Backend  | [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) |
+| Layer      | Technology                                              |
+|------------|---------------------------------------------------------|
+| Frontend   | Vanilla HTML + CSS + JavaScript                         |
+| Fonts      | Inter, JetBrains Mono (Google)                          |
+| OCR        | [Tesseract.js](https://tesseract.projectnaptha.com/) v4 |
+| PDF        | [pdf.js](https://mozilla.github.io/pdf.js/) v3.11.174   |
+| DOCX       | [Mammoth.js](https://github.com/mwilliamson/mammoth.js) v1.6.0 |
+| Markdown   | [Turndown](https://github.com/mixmark-io/turndown) v7.1.2 |
+| XLSX       | [SheetJS](https://sheetjs.com/) v0.18.5                 |
+| Backend    | [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) |
 
 ## License
 
